@@ -143,8 +143,8 @@ class KernelImage(GenericFile):
                     # Technically a redundant import, this is just
                     # to make your IDE happy :)
                     import zstandard
-                    decompress = zstandard.ZstdDecompressor().decompressobj()
-                    return decompress(buffer)
+                    dobj = zstandard.ZstdDecompressor().decompressobj()
+                    return dobj.decompress(buffer)
                 elif comp == 'lzma':
                     # Using .decompress() causes an error because of
                     # no end-of-stream marker
