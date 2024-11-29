@@ -22,6 +22,7 @@ from ecleankernel.process import get_removal_list, get_removable_files
 from ecleankernel.bootloader.grub import GRUB
 from ecleankernel.bootloader.grub2 import GRUB2
 from ecleankernel.bootloader.lilo import LILO
+from ecleankernel.bootloader.extlinux import EXTLINUX
 from ecleankernel.bootloader.yaboot import Yaboot
 from ecleankernel.bootloader.symlinks import Symlinks
 from ecleankernel.layout.blspec import BlSpecLayout
@@ -63,7 +64,7 @@ as root, or preferably mount /boot before using it.'''
 def main(argv: typing.List[str]) -> int:
     kernel_parts = [x.value for x in KernelFileType.__members__.values()]
     bootloaders: typing.List[typing.Type[Bootloader]] = [
-        LILO, GRUB2, GRUB, Yaboot, Symlinks]
+        LILO, GRUB2, GRUB, EXTLINUX, Yaboot, Symlinks]
     layouts: typing.List[typing.Type[Layout]] = [
         BlSpecLayout, StdLayout]
     sorts = [MTimeSort, VersionSort]
