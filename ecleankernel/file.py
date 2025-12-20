@@ -138,7 +138,9 @@ class KernelImage(GenericFile):
                     raise MissingDecompressorError(
                         f'The Python module {comp!r} that is required '
                         f'to decompress kernel file {self.path} '
-                        f'is not installed.')
+                        f'is not installed.  Did you remember to set the '
+                        f'corresponding USE flag when emerging '
+                        f'app-admin/eclean-kernel?')
                 if comp == 'zstandard':
                     # Technically a redundant import, this is just
                     # to make your IDE happy :)
