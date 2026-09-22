@@ -77,7 +77,7 @@ class BlSpecLayout(ModuleDirLayout):
                             ver: str,
                             module_dict: dict,
                             exclusions: typing.Container[KernelFileType] = [],
-                            ) -> Kernel:
+                            ) -> None:
         fobj = GenericFile(path, ftype)
 
         if ftype == KernelFileType.KERNEL:
@@ -94,8 +94,6 @@ class BlSpecLayout(ModuleDirLayout):
 
         if ftype not in exclusions:
             k.all_files.append(fobj)
-
-        return k
 
     def find_kernels(self,
                      exclusions: typing.Container[KernelFileType] = [],
@@ -118,15 +116,16 @@ class BlSpecLayout(ModuleDirLayout):
                 if dir_path.is_symlink() or not dir_path.is_dir():
                     continue
 
-                k = Kernel(ver, layout="bls")
+                kernels[(ver, "bls")] = Kernel(ver, layout="bls")
 
                 for fn in os.listdir(dir_path):
                     if fn.startswith('.'):
                         continue
-                    kernels[(ver, "bls")] = self.append_kernel_files(
+                    self.append_kernel_files(
                         self.name_map.get(fn, KernelFileType.MISC),
                         dir_path / fn,
-                        k, ver, module_dict, exclusions)
+                        kernels[(ver, "bls")], ver, module_dict, exclusions)
+
                 kernels[(ver, "bls")].all_files.append(
                     EmptyDirectory(dir_path))
 
@@ -145,10 +144,11 @@ class BlSpecLayout(ModuleDirLayout):
                     # Not our UKI
                     continue
 
-                kernels[(ver, "uki")] = self.append_kernel_files(
+                kernels[(ver, "uki")] = Kernel(ver, layout="uki")
+                self.append_kernel_files(
                         KernelFileType.KERNEL,
                         self.ukidir / file,
-                        Kernel(ver, layout="uki"),
+                        kernels[(ver, "uki")],
                         ver, module_dict,
                         exclusions)
 
