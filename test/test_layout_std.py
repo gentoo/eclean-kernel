@@ -467,6 +467,58 @@ other 1.2.1 [1.2.1]
                 0)
             self.assert_kernels(Path(td))
 
+    def test_main_remove_versions(self) -> None:
+        with self.create_layout() as td:
+            self.assertEqual(
+                main(['--remove-version=1.2.1,1.2.2',
+                      '--remove-version=1.2.3.old',
+                      '--destructive', '--root', td, '--debug', '--no-mount']),
+                0)
+            self.assert_kernels(Path(td), k121=False, k122=False,
+                                k123old=False)
+
+    def test_main_exclude_versions(self) -> None:
+        with self.create_layout() as td:
+            self.assertEqual(
+                main(['--all', '--exclude-version=1.2.1,1.2.3',
+                      '--exclude-version=1.2.4',
+                      '--destructive', '--root', td, '--debug', '--no-mount']),
+                0)
+            self.assert_kernels(Path(td), k122=False, k123old=False)
+
+    def test_main_remove_and_exclude_versions(self) -> None:
+        with self.create_layout() as td:
+            self.assertEqual(
+                main(['--remove-version=1.2.3,1.2.3.old,1.2.4',
+                      '--exclude-version=1.2.3.old,1.2.4',
+                      '--destructive', '--root', td, '--debug', '--no-mount']),
+                0)
+            self.assert_kernels(Path(td), k123=False)
+
+    @patch('ecleankernel.__main__.sys.stdout', new_callable=io.StringIO)
+    def test_main_remove_versions_pretend(self, sout: io.StringIO) -> None:
+        with self.create_layout() as td:
+            self.assertEqual(
+                main(['--remove-version', '1.2.1,1.2.2',
+                      '--exclude-version', '1.2.2',
+                      '--destructive', '--pretend',
+                      '--root', td, '--debug', '--no-mount']),
+                0)
+            self.assertIn('- other 1.2.1:', sout.getvalue())
+            self.assertNotIn('- other 1.2.2:', sout.getvalue())
+            self.assertNotIn('- other 1.2.4:', sout.getvalue())
+            self.assert_kernels(Path(td))
+
+    @patch('ecleankernel.__main__.sys.stderr', new_callable=io.StringIO)
+    def test_main_invalid_version_options(self, serr: io.StringIO) -> None:
+        for option in ('--remove-version', '--exclude-version'):
+            for values in ([], ['1.2.1', '1.2.2'], [''], ['1.2.1,'],
+                           [',1.2.1'], ['1.2.1,,1.2.2']):
+                with self.subTest(option=option, values=values):
+                    with self.assertRaises(SystemExit) as error:
+                        main([option] + values)
+                    self.assertEqual(error.exception.code, 2)
+
     def test_main_remove_n2(self) -> None:
         with self.create_layout() as td:
             self.assertEqual(

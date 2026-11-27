@@ -117,6 +117,67 @@ class KernelRemovalTests(unittest.TestCase):
                              limit=1,
                              destructive=False)
 
+    def test_version_selection(self) -> None:
+        cases = [
+            (['1.old'], [], [0]),
+            (['1.old', '2.new'], [], [0, 1]),
+            (['3.stray'], [], [2]),
+            (['missing'], [], []),
+            ([], [], []),
+            (['1.old', '2.new', '3.stray'], ['1.old', '3.stray'], [1]),
+            (None, ['1.old', '3.stray'], [1, 3]),
+            (None, [k.version for k in self.kernels], []),
+        ]
+        for versions, excluded, expected in cases:
+            with self.subTest(versions=versions, excluded=excluded):
+                removals = get_removal_list(
+                    self.kernels, sorter=VersionSort(), limit=None,
+                    destructive=True, versions=versions,
+                    excluded_versions=excluded)
+                self.assertEqual(set(removals),
+                                 {self.kernels[i] for i in expected})
+
+    def test_selected_version_overrides_limit(self) -> None:
+        for limit in (0, 1, 2):
+            with self.subTest(limit=limit):
+                self.assertEqual(
+                    set(get_removal_list(
+                        self.kernels, sorter=VersionSort(), limit=limit,
+                        destructive=True, versions=['2.new'])),
+                    {self.kernels[1]})
+
+    def test_excluded_versions_count_toward_limit(self) -> None:
+        self.assertEqual(
+            set(get_removal_list(
+                self.kernels, sorter=VersionSort(), limit=1,
+                destructive=True, excluded_versions=['2.new', '3.stray'])),
+            {self.kernels[0], self.kernels[3]})
+
+    def test_selected_version_bootloader_protection(self) -> None:
+        bootloader = MagicMock(spec=Bootloader)
+        bootloader.name = 'mock'
+        bootloader.return_value = [str(Path(self.td.name) / 'kernel.old')]
+        self.assertEqual(
+            set(get_removal_list(
+                self.kernels, sorter=VersionSort(), bootloader=bootloader,
+                versions=['1.old', '2.new'])),
+            {self.kernels[1]})
+
+    @patch('ecleankernel.process.os.uname')
+    def test_selected_version_current(self, uname: MagicMock) -> None:
+        uname.return_value = ('Linux', 'localhost', '1.old', '', 'x86_64')
+        self.assertEqual(
+            get_removal_list(
+                self.kernels, sorter=VersionSort(), destructive=True,
+                versions=['1.old']),
+            {})
+
+    def test_version_selection_no_vmlinuz(self) -> None:
+        with self.assertRaises(SystemError):
+            get_removal_list(
+                self.kernels[2:], sorter=VersionSort(), destructive=True,
+                versions=['3.stray'])
+
     def test_removal_bootloader_all_kernels(self) -> None:
         td = Path(self.td.name)
 

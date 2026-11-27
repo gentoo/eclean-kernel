@@ -26,12 +26,45 @@ In case the results are satisfactory, use::
 
 to actually remove the kernels.
 
+Kernel selection options can be combined and follows priority not ordering:
+
+1. ``--remove-version``
+2. ``--all``
+3. ``--num``
+
+This includes options read from configuration. For example, ``--all``
+overrides ``--num 3`` in a configuration file, and ``--remove-version``
+overrides both.
+
 If you are unsure whether kernel files are mapped correctly, you can use
 list mode::
 
 	eclean-kernel -l
 
 which just lists found kernels with file mappings.
+
+To clean up only specific kernel versions, use::
+
+	eclean-kernel --remove-version=6.6.10-gentoo,6.6.11-gentoo -p
+
+To preserve specific versions during normal cleanup, use::
+
+	eclean-kernel -n 3 --exclude-version=6.6.10-gentoo,6.6.11-gentoo -p
+
+Both options combine values and also accept comma-separated values::
+
+	eclean-kernel --remove-version=6.6.10-gentoo --remove-version=6.6.11-gentoo -p
+
+``--remove-version`` leaves all unselected versions, including stray files,
+untouched.
+
+``--exclude-version`` takes precedence over explicit removal and protects stray
+files too. Excluded versions still count toward the newest kernels kept by
+``--num``. Unknown versions have no effect.
+
+The running kernel remains protected, and bootloader references are respected
+unless ``--destructive`` is supplied. Files shared with retained kernels are
+also preserved. Remove ``-p`` once the preview is acceptable.
 
 
 Configuration file
@@ -82,11 +115,14 @@ Choosing kernels to remove
 
 The kernel choice algorithm is quite simple:
 
+Versions excluded by ``--exclude-version``, or not selected when
+``--remove-version`` is supplied, are always preserved. For eligible versions:
+
 1. If the kernel is currently used, don't remove it;
 2. If the kernel is referenced by a bootloader, don't remove it
    (unless ``--destructive``);
 3. If auxiliary files do not map to existing kernel, remove them;
-4. If ``--all`` is used, remove the kernel;
+4. If ``--remove-version`` or ``--all`` is used, remove the kernel;
 5. If kernel is not within *N* newest kernels (where *N* is the argument
    to ``-n``), remove it.
 
