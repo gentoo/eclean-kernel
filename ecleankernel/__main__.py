@@ -60,6 +60,13 @@ eclean-kernel will refuse to proceed. Please either run the program
 as root, or preferably mount /boot before using it.'''
 
 
+def parse_versions(value: str) -> typing.List[str]:
+    versions = value.split(',')
+    if any(not version for version in versions):
+        raise argparse.ArgumentTypeError('Kernel versions must not be empty')
+    return versions
+
+
 def main(argv: typing.List[str]) -> int:
     kernel_parts = [x.value for x in KernelFileType.__members__.values()]
     bootloaders: typing.List[typing.Type[Bootloader]] = [
@@ -105,9 +112,23 @@ def main(argv: typing.List[str]) -> int:
                        help='Alternate filesystem root to use')
 
     group = argp.add_argument_group('kernel selection')
+    group.add_argument('--remove-version',
+                       action='extend', type=parse_versions,
+                       metavar='VERSION[,VERSION...]',
+                       help='Remove only these exact kernel versions '
+                            '(comma-separated, repeatable; overrides '
+                            '--all and --num)')
+    group.add_argument('--exclude-version',
+                       action='extend', type=parse_versions, default=[],
+                       metavar='VERSION[,VERSION...]',
+                       help='Preserve these exact kernel versions '
+                            '(comma-separated, repeatable; takes '
+                            'precedence over '
+                            '--remove-version)')
     group.add_argument('-a', '--all',
                        action='store_true',
-                       help='Remove all kernels unless used by bootloader')
+                       help='Remove all kernels unless used by bootloader '
+                            '(overrides --num)')
     group.add_argument('-d', '--destructive',
                        action='store_true',
                        help='Destructive mode: remove kernels even when '
@@ -253,7 +274,9 @@ def main(argv: typing.List[str]) -> int:
                 limit=None if args.all else args.num,
                 sorter=sorter,
                 bootloader=bootloader,
-                destructive=args.destructive)
+                destructive=args.destructive,
+                versions=args.remove_version,
+                excluded_versions=args.exclude_version)
 
             has_kernel_install = False
             has_bootloader_postrm = False

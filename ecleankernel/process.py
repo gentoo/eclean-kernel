@@ -60,7 +60,9 @@ def get_removal_list(kernels: typing.List[Kernel],
                      sorter: KernelSort,
                      limit: typing.Optional[int] = 0,
                      bootloader: typing.Optional[Bootloader] = None,
-                     destructive: bool = False
+                     destructive: bool = False,
+                     versions: typing.Optional[typing.Iterable[str]] = None,
+                     excluded_versions: typing.Iterable[str] = (),
                      ) -> RemovableKernelDict:
     """
     Get list of kernel files to remove
@@ -70,9 +72,19 @@ def get_removal_list(kernels: typing.List[Kernel],
     kernels to keep, `bootloader` is the bootloader to reference
     in order to determine whether a kernel is used and `destructive`
     indicates whether bootloader references should be ignored.
+
+    If `versions` is provided, only those exact Kernel.version values
+    are eligible for removal, ignoring `limit`. `excluded_versions`
+    always take precedence, including for stray files. All kernels must
+    remain available to get_removable_files() to protect shared files.
     """
 
     logging.debug('in get_removal_list()')
+
+    selected = None if versions is None else frozenset(versions)
+    excluded = frozenset(excluded_versions)
+    if selected is not None:
+        limit = None
 
     remove_kernels: typing.Dict[Kernel, typing.List[str]] = {}
     for k in remove_stray(kernels):
@@ -122,7 +134,11 @@ def get_removal_list(kernels: typing.List[Kernel],
     current = os.uname()[2]
 
     for k in list(remove_kernels):
-        if k.version == current:
+        if (k.version in excluded
+                or (selected is not None
+                    and k.version not in selected)):
+            del remove_kernels[k]
+        elif k.version == current:
             print(f'Preserving currently running kernel ({current})')
             del remove_kernels[k]
 
